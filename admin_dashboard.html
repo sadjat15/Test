@@ -124,17 +124,39 @@
             <div id="questionStatus" class="status-msg"></div>
         </div>
 
-        <div id="manageUsersSection" class="section">
-            <h3>Manage Users</h3>
-            <p>Here you will see a list of users and their scores. <i>(Will be populated from the 'results' collection once users start taking tests).</i></p>
+                <div id="manageUsersSection" class="section">
+            <h3>Manage Users & Leaderboards</h3>
+            <div class="form-group">
+                <label>Select Test to View Leaderboard</label>
+                <select id="adminLeaderboardTestSelector" onchange="fetchAdminLeaderboard()">
+                    <option value="">-- Select a Test --</option>
+                </select>
+                <button class="action-btn" onclick="loadAdminLeaderboardTests()" style="margin-top: 10px; padding: 8px 15px; font-size: 14px;">Refresh Tests</button>
             </div>
+            
+            <table style="width:100%; text-align:left; border-collapse: collapse; margin-top: 20px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                <thead>
+                    <tr style="border-bottom:2px solid #ddd; background: #f4f7f6;">
+                        <th style="padding:10px;">Rank</th>
+                        <th style="padding:10px;">User Phone / ID</th>
+                        <th style="padding:10px;">Score</th>
+                        <th style="padding:10px;">Submission Time</th>
+                    </tr>
+                </thead>
+                <tbody id="adminLeaderboardBody">
+                    <tr><td colspan="4" style="padding:15px; text-align:center;">Select a test to view rankings.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
 
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDyLQ_-swHIeT7p40UVv-v4Z5SlZvqeCEc",
@@ -150,15 +172,17 @@
         const db = getFirestore(app);
         const storage = getStorage(app);
 
-        // UI Navigation Logic
+                // UI Navigation Logic
         window.showSection = function(sectionId) {
             document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(sectionId).classList.add('active');
             event.target.classList.add('active');
             
-            if(sectionId === 'addQuestionSection') loadTests(); // Auto-load tests when tab is clicked
+            if(sectionId === 'addQuestionSection') loadTests(); 
+            if(sectionId === 'manageUsersSection') loadAdminLeaderboardTests(); // <-- Add this line
         };
+
 
         window.logout = function() {
             window.location.href = "index.html";
@@ -261,6 +285,69 @@
                 status.style.color = "red"; status.innerText = "Error: " + e.message;
             }
         };
-    </script>
+            // 4. Load Tests into Admin Leaderboard Dropdown
+        window.loadAdminLeaderboardTests = async function() {
+            const selector = document.getElementById('adminLeaderboardTestSelector');
+            selector.innerHTML = '<option value="">Loading...</option>';
+            try {
+                const querySnapshot = await getDocs(collection(db, "tests"));
+                selector.innerHTML = '<option value="">-- Select a Test --</option>';
+                querySnapshot.forEach((doc) => {
+                    selector.innerHTML += `<option value="${doc.id}">${doc.data().testName}</option>`;
+                });
+            } catch (e) {
+                selector.innerHTML = `<option value="">Error loading tests</option>`;
+            }
+        };
+
+        // 5. Fetch and Display Leaderboard for Admin
+        window.fetchAdminLeaderboard = async function() {
+            const testId = document.getElementById('adminLeaderboardTestSelector').value;
+            const tbody = document.getElementById('adminLeaderboardBody');
+            
+            if (!testId) { 
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px;">Select a test to view rankings.</td></tr>'; 
+                return; 
+            }
+
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px;">Loading rankings...</td></tr>';
+            
+            try {
+                // Query results, filter by the selected test, and order by highest score
+                const q = query(collection(db, "results"), where("testId", "==", testId), orderBy("score", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                tbody.innerHTML = '';
+                if (querySnapshot.empty) { 
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px;">No one has taken this test yet.</td></tr>'; 
+                    return; 
+                }
+
+                let rank = 1;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    
+                    // Format the timestamp nicely
+                    const submissionDate = data.submittedAt ? data.submittedAt.toDate().toLocaleString() : 'Unknown';
+                    
+                    // Remove the fake domain we added during login to show just the phone number
+                    const userDisplay = data.userEmail ? data.userEmail.replace('@mocktest.com', '') : 'Unknown ID';
+                    
+                    tbody.innerHTML += `
+                        <tr style="border-bottom:1px solid #eee;">
+                            <td style="padding:10px; font-weight:bold;">#${rank}</td>
+                            <td style="padding:10px;">${userDisplay}</td>
+                            <td style="padding:10px; color:#5cb85c; font-weight:bold;">${data.score} / ${data.totalQuestions}</td>
+                            <td style="padding:10px; font-size: 14px; color: #666;">${submissionDate}</td>
+                        </tr>
+                    `;
+                    rank++;
+                });
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center; padding:15px;">Error fetching leaderboard. (Remember to click the Index link in the console!)</td></tr>`;
+                console.error(e.message);
+            }
+        };
+</script>
 </body>
 </html>
