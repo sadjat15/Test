@@ -60,11 +60,21 @@
         <div class="tab" id="adminTab" onclick="switchTab('admin')">Admin Login</div>
     </div>
 
-    <h2 id="formTitle">User Login/Register</h2>
+        <h2 id="formTitle">User Login/Register</h2>
     <input type="text" id="username" placeholder="Phone Number / Admin ID">
     <input type="password" id="password" placeholder="Password">
-    <button onclick="handleLogin()">Login</button>
+    <button onclick="handleLogin()">Login / Register</button>
+    
+    <div id="googleLoginSection" style="margin-top: 15px;">
+        <p style="margin: 10px 0; color: #777; font-size: 14px;">— OR —</p>
+        <button onclick="handleGoogleLogin()" style="background: white; color: #444; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" style="width: 18px;">
+            Continue with Google
+        </button>
+    </div>
+
     <p id="message" style="color: red; font-size: 14px; margin-top: 15px;"></p>
+
 </div>
 
 <script type="module">
