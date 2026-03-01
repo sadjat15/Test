@@ -64,30 +64,36 @@
     <input type="text" id="username" placeholder="Phone Number / Admin ID">
     <input type="password" id="password" placeholder="Password">
     <button onclick="handleLogin()">Login</button>
-    <p id="message" style="color: red; font-size: 14px; mt-2;"></p>
+    <p id="message" style="color: red; font-size: 14px; margin-top: 15px;"></p>
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  // Import Firebase v12.10.0 modules
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-  // TODO: Replace this with your Firebase Project Config
+  // Your actual Firebase configuration
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyDyLQ_-swHIeT7p40UVv-v4Z5SlZvqeCEc",
+    authDomain: "test-49b35.firebaseapp.com",
+    projectId: "test-49b35",
+    storageBucket: "test-49b35.firebasestorage.app",
+    messagingSenderId: "745047807461",
+    appId: "1:745047807461:web:183b80f7df2f386155cb0c",
+    measurementId: "G-M34G4LN2YN"
   };
 
+  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
   const auth = getAuth(app);
   const db = getFirestore(app);
 
   let currentMode = 'user';
 
+  // Function to switch between User and Admin tabs
   window.switchTab = function(mode) {
       currentMode = mode;
       document.getElementById('userTab').classList.remove('active');
@@ -96,24 +102,32 @@
       document.getElementById('formTitle').innerText = mode === 'admin' ? 'Admin Access' : 'User Login/Register';
   }
 
+  // Handle the login process
   window.handleLogin = function() {
       const userVal = document.getElementById('username').value;
       const passVal = document.getElementById('password').value;
       const msg = document.getElementById('message');
 
+      if (!userVal || !passVal) {
+          msg.innerText = "Please enter both ID/Number and Password.";
+          return;
+      }
+
       if (currentMode === 'admin') {
-          // Hardcoded Admin Logic as requested
+          // Hardcoded Admin Logic
           if (userVal === 'sad' && passVal === '1234') {
               msg.style.color = "green";
               msg.innerText = "Admin Login Successful! Redirecting...";
-              // Redirect to admin dashboard
               setTimeout(() => { window.location.href = "admin_dashboard.html"; }, 1000);
           } else {
+              msg.style.color = "red";
               msg.innerText = "Invalid Admin Credentials.";
           }
       } else {
-          // User Logic (Firebase Auth - using mock email for phone auth simplicity here)
-          const mockEmail = userVal + "@mocktest.com"; // Workaround to use phone numbers with standard email auth
+          // User Logic (Firebase Auth)
+          // We append a fake domain so Firebase accepts the phone number as an "email" for simple auth
+          const mockEmail = userVal + "@mocktest.com"; 
+          
           signInWithEmailAndPassword(auth, mockEmail, passVal)
               .then((userCredential) => {
                   msg.style.color = "green";
@@ -121,7 +135,7 @@
                   setTimeout(() => { window.location.href = "user_dashboard.html"; }, 1000);
               })
               .catch((error) => {
-                  // If user doesn't exist, create an account
+                  // If user doesn't exist, automatically create an account for them
                   if(error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
                       createUserWithEmailAndPassword(auth, mockEmail, passVal)
                       .then(() => {
@@ -129,8 +143,12 @@
                            msg.innerText = "Account Created & Logged in!";
                            setTimeout(() => { window.location.href = "user_dashboard.html"; }, 1000);
                       })
-                      .catch(err => { msg.innerText = "Error: " + err.message; });
+                      .catch(err => { 
+                          msg.style.color = "red";
+                          msg.innerText = "Error: " + err.message; 
+                      });
                   } else {
+                      msg.style.color = "red";
                       msg.innerText = "Error: " + error.message;
                   }
               });
