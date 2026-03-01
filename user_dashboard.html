@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard - MockTest Pro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: #f4f7f6;
+            display: flex;
+            height: 100vh;
+        }
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(180deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar h2 { margin-top: 0; border-bottom: 2px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
+        .nav-btn {
+            background: rgba(255,255,255,0.2); color: white; border: none; padding: 15px;
+            margin-bottom: 10px; border-radius: 8px; cursor: pointer; text-align: left; font-size: 16px;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.4); }
+        .logout-btn { margin-top: auto; background: #ff4b4b; }
+
+        /* Main Content */
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .section { display: none; }
+        .section.active { display: block; }
+        h3 { color: #333; font-size: 24px; }
+
+        /* Test Cards */
+        .test-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .test-card {
+            background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .start-btn {
+            background: #4facfe; color: white; border: none; padding: 10px 20px;
+            border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%;
+        }
+        .start-btn:hover { background: #00f2fe; }
+
+        /* Active Test UI */
+        .test-header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .timer { font-size: 20px; font-weight: bold; color: #ff4b4b; }
+        .pause-btn, .submit-btn {
+            padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white;
+        }
+        .pause-btn { background: #f0ad4e; }
+        .submit-btn { background: #5cb85c; }
+        
+        .question-container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .q-text { font-size: 18px; margin-bottom: 10px; color: #333; }
+        .q-hindi { color: #666; font-style: italic; margin-bottom: 15px; }
+        .q-image { max-width: 100%; max-height: 300px; margin-bottom: 15px; border-radius: 5px; display: none; }
+        
+        .options-list { list-style: none; padding: 0; }
+        .options-list li {
+            background: #f9f9f9; padding: 12px; margin-bottom: 10px; border-radius: 5px; cursor: pointer; border: 1px solid #ddd;
+        }
+        .options-list li:hover { background: #eef; }
+        .options-list input { margin-right: 10px; }
+
+        .test-footer { display: flex; justify-content: space-between; margin-top: 20px; }
+        .nav-q-btn { background: #333; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        .nav-q-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* Pause Overlay */
+        #pauseOverlay {
+            display: none; text-align: center; padding: 50px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+        <div class="sidebar">
+        <h2>Student Panel</h2>
+        <button class="nav-btn" onclick="showSection('dashboardSection'); loadTests();">Available Tests</button>
+        <button class="nav-btn" onclick="showSection('leaderboardSection'); populateLeaderboardDropdown();">Leaderboard</button>
+        <button class="nav-btn" onclick="showSection('profileSection')">Profile & Settings</button>
+        <button class="nav-btn logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+
+    <div class="main-content">
+        <div id="dashboardSection" class="section active">
+            <h3>Available Mock Tests</h3>
+            <div id="testGrid" class="test-grid">
+                <p>Loading tests...</p>
+            </div>
+        </div>
+
+        <div id="activeTestSection" class="section">
+        <div id="leaderboardSection" class="section">
+            <h3>Test Leaderboards</h3>
+            <p>Select a test below to see how you rank against other students.</p>
+            <select id="leaderboardTestSelector" onchange="fetchLeaderboard()" style="padding:10px; width:100%; max-width:400px; border-radius:5px; margin-bottom: 20px;">
+                <option value="">-- Select a Test --</option>
+            </select>
+            
+            <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                <table style="width:100%; text-align:left; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom:2px solid #ddd;">
+                            <th style="padding:10px;">Rank</th>
+                            <th style="padding:10px;">User ID</th>
+                            <th style="padding:10px;">Score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardBody">
+                        <tr><td colspan="3" style="padding:10px; text-align:center;">Select a test to view rankings.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="profileSection" class="section">
+            <h3>Profile & Security</h3>
+            <div style="background: white; padding: 30px; border-radius: 10px; max-width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                <label style="font-weight: bold; margin-bottom: 10px; display: block;">Update Password</label>
+                <input type="password" id="newPassword" placeholder="Enter new password (min. 6 chars)" style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ccc; border-radius:5px;">
+                <button class="start-btn" onclick="updateUserPassword()" style="margin-top:0;">Change Password</button>
+                <p id="passwordMsg" style="margin-top:15px; font-weight:bold; font-size:14px;"></p>
+            </div>
+        </div>
+
+            <div class="test-header">
+                <h3 id="activeTestName" style="margin: 0;">Test Name</h3>
+                <div>
+                    <span class="timer" id="timerDisplay">00:00</span>
+                    <button class="pause-btn" id="pauseBtn" onclick="togglePause()">Pause</button>
+                    <button class="submit-btn" onclick="submitTest()">Submit Test</button>
+                </div>
+            </div>
+
+            <div id="pauseOverlay">
+                <h2>Test Paused</h2>
+                <p>Questions are hidden to prevent cheating.</p>
+                <button class="start-btn" style="width: 200px;" onclick="togglePause()">Resume Test</button>
+            </div>
+
+            <div id="questionArea" class="question-container">
+                <div class="q-text" id="qTextEng">Loading question...</div>
+                <div class="q-hindi" id="qTextHin"></div>
+                <img id="qImg" class="q-image" src="" alt="Question Image">
+                
+                <ul class="options-list" id="optionsList">
+                    </ul>
+
+                <div class="test-footer">
+                    <button class="nav-q-btn" id="prevBtn" onclick="changeQuestion(-1)">Previous</button>
+                    <span id="qProgress">1 / 1</span>
+                    <button class="nav-q-btn" id="nextBtn" onclick="changeQuestion(1)">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+import { getFirestore, collection, getDocs, addDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDyLQ_-swHIeT7p40UVv-v4Z5SlZvqeCEc",
+            authDomain: "test-49b35.firebaseapp.com",
+            projectId: "test-49b35",
+            storageBucket: "test-49b35.firebasestorage.app",
+            messagingSenderId: "745047807461",
+            appId: "1:745047807461:web:183b80f7df2f386155cb0c",
+            measurementId: "G-M34G4LN2YN"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let currentUser = null;
+        onAuthStateChanged(auth, (user) => {
+            if (user) currentUser = user;
+            else window.location.href = "index.html"; // Protect route
+        });
+
+        // Test State Variables
+        let questions = [];
+        let currentQIndex = 0;
+        let userAnswers = {}; // { questionIndex: selectedOptionIndex }
+        let timerInterval;
+        let timeLeftSeconds = 0;
+        let isPaused = false;
+        let currentTestId = null;
+
+        // 1. Load Tests on Startup
+        async function loadTests() {
+            const grid = document.getElementById('testGrid');
+            try {
+                const querySnapshot = await getDocs(collection(db, "tests"));
+                grid.innerHTML = '';
+                if(querySnapshot.empty) { grid.innerHTML = '<p>No tests available right now.</p>'; return; }
+                
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    grid.innerHTML += `
+                        <div class="test-card">
+                            <h3>${data.testName}</h3>
+                            <p>Time: ${data.timeLimitMinutes} mins</p>
+                            <button class="start-btn" onclick="startTest('${doc.id}', '${data.testName}', ${data.timeLimitMinutes})">Start Test</button>
+                        </div>
+                    `;
+                });
+            } catch (e) {
+                grid.innerHTML = `<p style="color:red;">Error loading tests: ${e.message}</p>`;
+            }
+        }
+        window.onload = loadTests;
+
+        // 2. Start Test & Fetch Questions
+        window.startTest = async function(testId, testName, timeLimit) {
+            document.getElementById('dashboardSection').classList.remove('active');
+            document.getElementById('activeTestSection').classList.add('active');
+            document.getElementById('activeTestName').innerText = testName;
+            
+            currentTestId = testId;
+            questions = [];
+            userAnswers = {};
+            currentQIndex = 0;
+            
+            try {
+                const qSnapshot = await getDocs(collection(db, `tests/${testId}/questions`));
+                qSnapshot.forEach((doc) => questions.push({ id: doc.id, ...doc.data() }));
+                
+                if(questions.length === 0) {
+                    alert("This test has no questions yet!");
+                    goHome();
+                    return;
+                }
+
+                // Initialize Timer
+                timeLeftSeconds = timeLimit * 60;
+                startTimer();
+                renderQuestion();
+
+            } catch (e) { alert("Error loading questions."); goHome(); }
+        }
+
+        // 3. Render Current Question
+        function renderQuestion() {
+            if (questions.length === 0) return;
+            const q = questions[currentQIndex];
+            
+            document.getElementById('qTextEng').innerText = `Q${currentQIndex + 1}. ${q.questionEnglish}`;
+            document.getElementById('qTextHin').innerText = q.questionHindi ? q.questionHindi : '';
+            document.getElementById('qProgress').innerText = `${currentQIndex + 1} / ${questions.length}`;
+            
+            // Handle Image
+            const imgEl = document.getElementById('qImg');
+            if(q.imageUrl) { imgEl.src = q.imageUrl; imgEl.style.display = "block"; } 
+            else { imgEl.style.display = "none"; }
+
+            // Handle Options
+            const optsList = document.getElementById('optionsList');
+            optsList.innerHTML = '';
+            q.options.forEach((opt, index) => {
+                const isChecked = userAnswers[currentQIndex] === index ? "checked" : "";
+                optsList.innerHTML += `
+                    <li>
+                        <label style="cursor:pointer; display:block;">
+                            <input type="radio" name="option" value="${index}" onchange="saveAnswer(${index})" ${isChecked}>
+                            ${opt}
+                        </label>
+                    </li>
+                `;
+            });
+
+            // Button States
+            document.getElementById('prevBtn').disabled = currentQIndex === 0;
+            document.getElementById('nextBtn').disabled = currentQIndex === questions.length - 1;
+        }
+
+        window.saveAnswer = function(optIndex) {
+            userAnswers[currentQIndex] = optIndex;
+        }
+
+        window.changeQuestion = function(step) {
+            currentQIndex += step;
+            renderQuestion();
+        }
+
+        // 4. Timer & Pause Logic
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if(!isPaused) {
+                    timeLeftSeconds--;
+                    updateTimerDisplay();
+                    if(timeLeftSeconds <= 0) {
+                        clearInterval(timerInterval);
+                        alert("Time is up! Auto-submitting...");
+                        submitTest();
+                    }
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(timeLeftSeconds / 60).toString().padStart(2, '0');
+            const secs = (timeLeftSeconds % 60).toString().padStart(2, '0');
+            document.getElementById('timerDisplay').innerText = `${mins}:${secs}`;
+        }
+
+        window.togglePause = function() {
+            isPaused = !isPaused;
+            const btn = document.getElementById('pauseBtn');
+            const qArea = document.getElementById('questionArea');
+            const overlay = document.getElementById('pauseOverlay');
+
+            if(isPaused) {
+                btn.innerText = "Resume";
+                btn.style.background = "#5bc0de";
+                qArea.style.display = "none"; // Hide questions to prevent cheating
+                overlay.style.display = "block";
+            } else {
+                btn.innerText = "Pause";
+                btn.style.background = "#f0ad4e";
+                qArea.style.display = "block";
+                overlay.style.display = "none";
+            }
+        }
+
+        // 5. Submit Test & Calculate Score
+        window.submitTest = async function() {
+            if(!confirm("Are you sure you want to submit the test?")) return;
+            
+            clearInterval(timerInterval);
+            let score = 0;
+            
+            // Calculate Score
+            questions.forEach((q, index) => {
+                if(userAnswers[index] === q.correctAnswerIndex) {
+                    score++;
+                }
+            });
+
+            try {
+                // Save Result to Firestore
+                await addDoc(collection(db, "results"), {
+                    userId: currentUser.uid,
+                    userEmail: currentUser.email,
+                    testId: currentTestId,
+                    score: score,
+                    totalQuestions: questions.length,
+                    submittedAt: new Date()
+                });
+                
+                alert(`Test Submitted! You scored ${score} out of ${questions.length}.`);
+                goHome();
+            } catch (e) {
+                alert("Error saving results: " + e.message);
+            }
+        }
+
+        window.goHome = function() {
+            clearInterval(timerInterval);
+            document.getElementById('activeTestSection').classList.remove('active');
+            document.getElementById('dashboardSection').classList.add('active');
+            loadTests();
+        }
+
+        window.logout = function() {
+            auth.signOut().then(() => { window.location.href = "index.html"; });
+        }
+           // --- UI Navigation ---
+        window.showSection = function(sectionId) {
+            // Hide the test if they try to navigate away while taking it
+            if(sectionId !== 'activeTestSection') clearInterval(timerInterval); 
+            
+            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+        }
+
+        // --- Leaderboard Logic ---
+        window.populateLeaderboardDropdown = async function() {
+            const selector = document.getElementById('leaderboardTestSelector');
+            try {
+                const querySnapshot = await getDocs(collection(db, "tests"));
+                selector.innerHTML = '<option value="">-- Select a Test --</option>';
+                querySnapshot.forEach((doc) => {
+                    selector.innerHTML += `<option value="${doc.id}">${doc.data().testName}</option>`;
+                });
+            } catch (e) { console.error("Error loading tests", e); }
+        }
+
+        window.fetchLeaderboard = async function() {
+            const testId = document.getElementById('leaderboardTestSelector').value;
+            const tbody = document.getElementById('leaderboardBody');
+            
+            if (!testId) { 
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Select a test to view rankings.</td></tr>'; 
+                return; 
+            }
+
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Loading rankings...</td></tr>';
+            
+            try {
+                // Get results for THIS test, ordered by Highest Score first
+                const q = query(collection(db, "results"), where("testId", "==", testId), orderBy("score", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                tbody.innerHTML = '';
+                if (querySnapshot.empty) { 
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No results yet. Be the first to take this test!</td></tr>'; 
+                    return; 
+                }
+
+                let rank = 1;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    // Hide the full phone number for privacy (e.g., 9876543210 -> 987654****)
+                    let userDisplay = data.userEmail ? data.userEmail.split('@')[0] : 'Unknown';
+                    if(userDisplay.length > 4) { userDisplay = userDisplay.slice(0, -4) + '****'; }
+                    
+                    tbody.innerHTML += `
+                        <tr style="border-bottom:1px solid #eee;">
+                            <td style="padding:15px; font-weight:bold;">#${rank}</td>
+                            <td style="padding:15px;">User: ${userDisplay}</td>
+                            <td style="padding:15px; color:#5cb85c; font-weight:bold;">${data.score}</td>
+                        </tr>
+                    `;
+                    rank++;
+                });
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="3" style="color:red; text-align:center;">Error fetching leaderboard. (See note below).</td></tr>`;
+                console.error(e.message);
+            }
+        }
+
+        // --- Password Reset Logic ---
+        window.updateUserPassword = function() {
+            const newPass = document.getElementById('newPassword').value;
+            const msg = document.getElementById('passwordMsg');
+            
+            if(newPass.length < 6) {
+                msg.style.color = "red"; msg.innerText = "Password must be at least 6 characters."; return;
+            }
+
+            if(currentUser) {
+                updatePassword(currentUser, newPass).then(() => {
+                    msg.style.color = "green"; msg.innerText = "Password updated successfully!";
+                    document.getElementById('newPassword').value = '';
+                }).catch((error) => {
+                    msg.style.color = "red"; 
+                    // Firebase requires recent login for sensitive actions
+                    if(error.code === 'auth/requires-recent-login') {
+                        msg.innerText = "Security alert: Please log out and log back in to change your password.";
+                    } else {
+                        msg.innerText = "Error: " + error.message;
+                    }
+                });
+            }
+        }
+ </script>
+</body>
+</html>
