@@ -96,6 +96,8 @@
   const analytics = getAnalytics(app);
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
 
   let currentMode = 'user';
 
