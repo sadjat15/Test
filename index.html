@@ -162,6 +162,38 @@
               });
       }
   }
+  // Updated switchTab to hide Google login for Admins
+  window.switchTab = function(mode) {
+      currentMode = mode;
+      document.getElementById('userTab').classList.remove('active');
+      document.getElementById('adminTab').classList.remove('active');
+      document.getElementById(mode + 'Tab').classList.add('active');
+      document.getElementById('formTitle').innerText = mode === 'admin' ? 'Admin Access' : 'User Login/Register';
+      
+      // Hide Google Login if Admin tab is selected
+      document.getElementById('googleLoginSection').style.display = mode === 'admin' ? 'none' : 'block';
+  }
+
+  // New Google Sign-In Function
+  window.handleGoogleLogin = function() {
+      const msg = document.getElementById('message');
+      msg.style.color = "blue";
+      msg.innerText = "Opening Google Sign-In...";
+
+      signInWithPopup(auth, provider)
+          .then((result) => {
+              // This gives you a Google Access Token and user info.
+              const user = result.user;
+              msg.style.color = "green";
+              msg.innerText = `Welcome, ${user.displayName}! Redirecting...`;
+              
+              setTimeout(() => { window.location.href = "user_dashboard.html"; }, 1000);
+          }).catch((error) => {
+              msg.style.color = "red";
+              msg.innerText = "Google Login Failed: " + error.message;
+          });
+  }
+
 </script>
 </body>
 </html>
