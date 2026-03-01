@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - MockTest Pro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: #f4f7f6;
+            display: flex;
+            height: 100vh;
+        }
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar h2 { margin-top: 0; border-bottom: 2px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
+        .nav-btn {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: none;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        .nav-btn:hover, .nav-btn.active { background: rgba(255,255,255,0.3); }
+        .logout-btn { margin-top: auto; background: #ff4b4b; }
+        
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+        .section { display: none; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .section.active { display: block; }
+        h3 { color: #764ba2; margin-top: 0; }
+        
+        /* Form Styles */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-family: inherit;
+        }
+        button.action-btn {
+            background: #667eea; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold;
+        }
+        button.action-btn:hover { background: #764ba2; }
+        .status-msg { margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>Admin Panel</h2>
+        <button class="nav-btn active" onclick="showSection('createTestSection')">1. Create Test</button>
+        <button class="nav-btn" onclick="showSection('addQuestionSection')">2. Add Questions</button>
+        <button class="nav-btn" onclick="showSection('manageUsersSection')">3. Manage Users</button>
+        <button class="nav-btn logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="main-content">
+        
+        <div id="createTestSection" class="section active">
+            <h3>Create a New Test</h3>
+            <div class="form-group">
+                <label>Test Name</label>
+                <input type="text" id="testName" placeholder="e.g., SSC CGL Mock Test 1">
+            </div>
+            <div class="form-group">
+                <label>Time Limit (in minutes)</label>
+                <input type="number" id="testTime" placeholder="e.g., 60">
+            </div>
+            <button class="action-btn" onclick="createTest()">Save Test</button>
+            <div id="testStatus" class="status-msg"></div>
+        </div>
+
+        <div id="addQuestionSection" class="section">
+            <h3>Add Question to Test</h3>
+            <div class="form-group">
+                <label>Select Test</label>
+                <select id="testSelector">
+                    <option value="">-- Load Tests First --</option>
+                </select>
+                <button onclick="loadTests()" style="margin-top: 5px; cursor:pointer;">Refresh Tests</button>
+            </div>
+            
+            <div class="form-group">
+                <label>Question (English)</label>
+                <textarea id="qEnglish" rows="3" placeholder="Enter question in English"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Question (Hindi)</label>
+                <textarea id="qHindi" rows="3" placeholder="हिंदी में प्रश्न दर्ज करें"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Upload Image (Optional)</label>
+                <input type="file" id="qImage" accept="image/*">
+            </div>
+
+            <div class="form-group"><label>Option 1</label><input type="text" id="opt1"></div>
+            <div class="form-group"><label>Option 2</label><input type="text" id="opt2"></div>
+            <div class="form-group"><label>Option 3</label><input type="text" id="opt3"></div>
+            <div class="form-group"><label>Option 4</label><input type="text" id="opt4"></div>
+            
+            <div class="form-group">
+                <label>Correct Option (1-4)</label>
+                <input type="number" id="correctOpt" min="1" max="4">
+            </div>
+
+            <button class="action-btn" onclick="addQuestion()">Add Question</button>
+            <div id="questionStatus" class="status-msg"></div>
+        </div>
+
+        <div id="manageUsersSection" class="section">
+            <h3>Manage Users</h3>
+            <p>Here you will see a list of users and their scores. <i>(Will be populated from the 'results' collection once users start taking tests).</i></p>
+            </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDyLQ_-swHIeT7p40UVv-v4Z5SlZvqeCEc",
+            authDomain: "test-49b35.firebaseapp.com",
+            projectId: "test-49b35",
+            storageBucket: "test-49b35.firebasestorage.app",
+            messagingSenderId: "745047807461",
+            appId: "1:745047807461:web:183b80f7df2f386155cb0c",
+            measurementId: "G-M34G4LN2YN"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        // UI Navigation Logic
+        window.showSection = function(sectionId) {
+            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            event.target.classList.add('active');
+            
+            if(sectionId === 'addQuestionSection') loadTests(); // Auto-load tests when tab is clicked
+        };
+
+        window.logout = function() {
+            window.location.href = "index.html";
+        };
+
+        // --- FIREBASE LOGIC ---
+
+        // 1. Create a Test
+        window.createTest = async function() {
+            const name = document.getElementById('testName').value;
+            const time = document.getElementById('testTime').value;
+            const status = document.getElementById('testStatus');
+
+            if (!name || !time) {
+                status.style.color = "red"; status.innerText = "Please fill all fields."; return;
+            }
+
+            try {
+                status.style.color = "blue"; status.innerText = "Saving test...";
+                await addDoc(collection(db, "tests"), {
+                    testName: name,
+                    timeLimitMinutes: parseInt(time),
+                    createdAt: new Date()
+                });
+                status.style.color = "green"; status.innerText = "Test Created Successfully!";
+                document.getElementById('testName').value = '';
+                document.getElementById('testTime').value = '';
+            } catch (e) {
+                status.style.color = "red"; status.innerText = "Error: " + e.message;
+            }
+        };
+
+        // 2. Load Tests into Dropdown
+        window.loadTests = async function() {
+            const selector = document.getElementById('testSelector');
+            selector.innerHTML = '<option value="">Loading...</option>';
+            try {
+                const querySnapshot = await getDocs(collection(db, "tests"));
+                selector.innerHTML = '<option value="">-- Select a Test --</option>';
+                querySnapshot.forEach((doc) => {
+                    selector.innerHTML += `<option value="${doc.id}">${doc.data().testName}</option>`;
+                });
+            } catch (e) {
+                selector.innerHTML = `<option value="">Error loading tests</option>`;
+            }
+        };
+
+        // 3. Add Question with Image Upload
+        window.addQuestion = async function() {
+            const testId = document.getElementById('testSelector').value;
+            const qEnglish = document.getElementById('qEnglish').value;
+            const qHindi = document.getElementById('qHindi').value;
+            const opt1 = document.getElementById('opt1').value;
+            const opt2 = document.getElementById('opt2').value;
+            const opt3 = document.getElementById('opt3').value;
+            const opt4 = document.getElementById('opt4').value;
+            const correctOpt = document.getElementById('correctOpt').value;
+            const fileInput = document.getElementById('qImage');
+            const status = document.getElementById('questionStatus');
+
+            if (!testId || !qEnglish || !opt1 || !opt2 || !opt3 || !opt4 || !correctOpt) {
+                status.style.color = "red"; status.innerText = "Please fill all required text fields."; return;
+            }
+
+            status.style.color = "blue"; status.innerText = "Uploading and saving...";
+
+            let imageUrl = null;
+
+            try {
+                // If an image is selected, upload it to Firebase Storage first
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    const storageRef = ref(storage, 'question_images/' + Date.now() + '_' + file.name);
+                    await uploadBytes(storageRef, file);
+                    imageUrl = await getDownloadURL(storageRef);
+                }
+
+                // Save question data to a subcollection inside the selected test
+                await addDoc(collection(db, `tests/${testId}/questions`), {
+                    questionEnglish: qEnglish,
+                    questionHindi: qHindi,
+                    imageUrl: imageUrl, // Will be null if no image was uploaded
+                    options: [opt1, opt2, opt3, opt4],
+                    correctAnswerIndex: parseInt(correctOpt) - 1 // Arrays are 0-indexed (0 to 3)
+                });
+
+                status.style.color = "green"; status.innerText = "Question added successfully!";
+                
+                // Clear fields for the next question
+                document.getElementById('qEnglish').value = '';
+                document.getElementById('qHindi').value = '';
+                document.getElementById('qImage').value = '';
+                document.getElementById('opt1').value = '';
+                document.getElementById('opt2').value = '';
+                document.getElementById('opt3').value = '';
+                document.getElementById('opt4').value = '';
+                document.getElementById('correctOpt').value = '';
+
+            } catch (e) {
+                status.style.color = "red"; status.innerText = "Error: " + e.message;
+            }
+        };
+    </script>
+</body>
+</html>
